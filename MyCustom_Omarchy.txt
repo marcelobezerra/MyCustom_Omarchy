@@ -168,6 +168,30 @@ Parâmetros customizados na cmdline do linux-cachyos (/boot/limine.conf):
 Ver seção 11 para descrição detalhada de cada parâmetro.
 
 ---------------------------------------------------------------
+RESTAURAÇÃO AUTOMATIZADA
+---------------------------------------------------------------
+Em caso de reinstalação do Omarchy, todas as configurações podem
+ser restauradas executando o script restore.sh do repositório:
+
+  git clone https://github.com/marcelobezerra/MyCustom_Omarchy.git
+  cd MyCustom_Omarchy
+  bash restore.sh
+
+O script solicita a senha sudo uma vez e automatiza:
+  - Instalação de pacotes (pacman + AUR via yay)
+  - Compilação do shim IPv4 para WiVRn
+  - Cópia de todos os arquivos de configuração
+  - Injeção dos parâmetros customizados do kernel no limine
+  - Reload de serviços e habilitação do WiVRn
+
+Pendências manuais após o restore (não automatizáveis):
+  - Reiniciar o sistema (aplicar parâmetros do kernel)
+  - Instalar APK WiVRn r2553 no Pico 4
+  - Confirmar versão proton-cachyos-11 no ProtonUp-Qt
+  - Importar perfil "RED" no OpenRGB na primeira execução
+  - Remover snapper se vier instalado no Omarchy 3.8.3+
+
+---------------------------------------------------------------
 OUTROS
 ---------------------------------------------------------------
   - Snapper (snapshots btrfs) removido e desativado permanentemente
