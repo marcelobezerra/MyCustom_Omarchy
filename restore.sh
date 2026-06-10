@@ -56,6 +56,7 @@ PACMAN_PKGS=(
     jq                  # weather.sh e hook Claude
     gcc                 # compilar wivrn_ipv4_shim.c
     openrgb             # iluminação RGB
+    coolercontrol       # controle de fans e sensores
     github-cli          # gh — download de APKs do WiVRn
 )
 
@@ -148,6 +149,25 @@ cp "$REPO_DIR/wivrn/wivrn-stop"  ~/.local/bin/
 chmod +x ~/.local/bin/wivrn-start ~/.local/bin/wivrn-stop
 log "~/.local/bin/wivrn-start e wivrn-stop"
 
+header "CONFIGS — OPENRGB"
+
+mkdir -p ~/.config/OpenRGB
+cp "$REPO_DIR/openrgb/OpenRGB.json" ~/.config/OpenRGB/
+cp "$REPO_DIR/openrgb/RED.orp"      ~/.config/OpenRGB/
+cp "$REPO_DIR/openrgb/sizes.ors"    ~/.config/OpenRGB/
+log "~/.config/OpenRGB/ (config + perfil RED)"
+
+header "CONFIGS — COOLERCONTROL"
+
+info "Parando coolercontrold para copiar configs..."
+sudo systemctl stop coolercontrold 2>/dev/null || true
+sudo cp "$REPO_DIR/coolercontrol/config.toml"    /etc/coolercontrol/
+sudo cp "$REPO_DIR/coolercontrol/config-ui.json" /etc/coolercontrol/
+sudo cp "$REPO_DIR/coolercontrol/modes.json"     /etc/coolercontrol/
+sudo cp "$REPO_DIR/coolercontrol/alerts.json"    /etc/coolercontrol/
+sudo cp "$REPO_DIR/coolercontrol/calibrations.json" /etc/coolercontrol/
+log "/etc/coolercontrol/ (perfis de fan curve restaurados)"
+
 header "CONFIGS — OMARCHY BRANDING"
 
 mkdir -p ~/.config/omarchy/branding
@@ -201,6 +221,9 @@ sudo limine-entry-tool
 info "Habilitando serviço WiVRn..."
 systemctl --user enable wivrn.service
 
+info "Habilitando e iniciando coolercontrold..."
+sudo systemctl enable --now coolercontrold
+
 log "Serviços recarregados."
 
 # ---------------------------------------------------------------------------
@@ -223,7 +246,8 @@ echo ""
 echo "  3. Proton CachyOS: confirme a versão instalada no ProtonUp-Qt"
 echo "     e selecione 'proton-cachyos-11' nas propriedades do HL:A na Steam."
 echo ""
-echo "  4. OpenRGB: importe o perfil 'RED' manualmente na primeira execução."
+echo "  4. OpenRGB: na primeira execução, deixe detectar os dispositivos RGB.
+     Após a detecção, o perfil RED será carregado automaticamente pelo autostart."
 echo ""
 echo "  5. Snapper já desativado pelas configs — verifique se o pacote"
 echo "     foi removido: sudo pacman -Rns snapper limine-snapper-sync"
