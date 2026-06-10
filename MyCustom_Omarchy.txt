@@ -105,6 +105,10 @@ Workaround para ipv6.disable=1 (WiVRn usa sockets AF_INET6):
 Procedimento para jogar: conectar USB → rodar wivrn-start →
 abrir WiVRn no headset → lançar HL:A pela Steam.
 
+Scripts auxiliares:
+  wivrn-start (~/.local/bin/wivrn-start) → ativa RNDIS e inicia o serviço
+  wivrn-stop  (~/.local/bin/wivrn-stop)  → para o serviço WiVRn
+
 ---------------------------------------------------------------
 INICIALIZAÇÃO AUTOMÁTICA (AUTOSTART)
 ---------------------------------------------------------------
