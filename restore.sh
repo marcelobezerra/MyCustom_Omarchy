@@ -197,6 +197,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Hook do pacman — rastreamento automático de pacotes
+# ---------------------------------------------------------------------------
+header "SISTEMA — HOOK DO PACMAN (pacotes.txt)"
+
+info "Instalando script do hook..."
+sudo cp "$REPO_DIR/hooks/update-pacotes-hook.sh" /usr/local/bin/update-pacotes-hook.sh
+sudo chmod +x /usr/local/bin/update-pacotes-hook.sh
+log "/usr/local/bin/update-pacotes-hook.sh"
+
+info "Criando hook do pacman..."
+sudo mkdir -p /etc/pacman.d/hooks
+sudo tee /etc/pacman.d/hooks/99-update-pacotes.hook > /dev/null << 'HOOK'
+[Trigger]
+Operation = Install
+Type = Package
+Target = *
+
+[Action]
+Description = Atualizando pacotes.txt...
+When = PostTransaction
+Exec = /usr/local/bin/update-pacotes-hook.sh
+HOOK
+log "/etc/pacman.d/hooks/99-update-pacotes.hook"
+
+info "Clonando repositório permanente para ~/MyCustom_Omarchy_repo..."
+if [ ! -d "$HOME/MyCustom_Omarchy_repo/.git" ]; then
+    git clone https://github.com/marcelobezerra/MyCustom_Omarchy.git "$HOME/MyCustom_Omarchy_repo"
+    git -C "$HOME/MyCustom_Omarchy_repo" config user.email "bezerrasilva.marcelo@gmail.com"
+    git -C "$HOME/MyCustom_Omarchy_repo" config user.name "marcelobezerra"
+    log "~/MyCustom_Omarchy_repo clonado."
+else
+    log "~/MyCustom_Omarchy_repo já existe — pulando."
+fi
+
+# ---------------------------------------------------------------------------
 # Recarregar serviços
 # ---------------------------------------------------------------------------
 header "RECARREGANDO SERVIÇOS"
