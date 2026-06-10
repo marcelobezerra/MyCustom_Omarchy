@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Inicia o WiVRn server garantindo que a rede USB (RNDIS) esteja ativa.
+# Usa shim IPv4 quando o kernel roda com ipv6.disable=1.
+
+RNDIS_IP="192.168.42"
+RNDIS_TIMEOUT=15
+
+WIVRN_BIN="/usr/bin/wivrn-server"
+WIVRN_COPY="/home/richthofen/.local/bin/wivrn-server-ipv4"
+WIVRN_SHIM="/home/richthofen/.local/lib/wivrn_ipv4_shim.so"
+
+# --- Verificar/sincronizar o binário sem capabilities ---
+if grep -q "ipv6.disable=1" /proc/cmdline 2>/dev/null; then
+    if [ ! -f "$WIVRN_COPY" ] || ! cmp -s "$WIVRN_BIN" "$WIVRN_COPY"; then
+        echo "[..] WiVRn atualizado — sincronizando cópia IPv4..."
+        cp "$WIVRN_BIN" "$WIVRN_COPY"
+        echo "[OK] Cópia sincronizada."
+    fi
+    if [ ! -f "$WIVRN_SHIM" ]; then
+        echo "[ERRO] Shim IPv4 não encontrado: $WIVRN_SHIM"
+        echo "       Recompile: gcc -shared -fPIC -O2 -o $WIVRN_SHIM"
+        echo "         $(dirname $WIVRN_SHIM)/wivrn_ipv4_shim.c -ldl"
+        exit 1
+    fi
+fi
+
+# Verificar se já está rodando
+if systemctl --user is-active --quiet wivrn.service; then
+    echo "WiVRn já está rodando."
+    systemctl --user status wivrn.service --no-pager -n 3
+    exit 0
+fi
+
+# --- Verificar/ativar rede RNDIS ---
+rndis_ativa() {
+    ip addr 2>/dev/null | grep -q "${RNDIS_IP}"
+}
+
+if rndis_ativa; then
+    echo "[OK] Rede USB (RNDIS) já está ativa."
+else
+    echo "[..] Rede USB (RNDIS) não detectada. Verificando Pico 4 via ADB..."
+
+    if ! adb devices 2>/dev/null | grep -q "device$"; then
+        echo "[ERRO] Pico 4 não detectado via ADB."
+        echo "       Conecte o cabo USB e confirme a autorização ADB no headset."
+        exit 1
+    fi
+
+    echo "[..] Ativando USB tethering no Pico 4..."
+    adb shell "svc usb setFunctions rndis" 2>/dev/null
+
+    echo -n "[..] Aguardando interface de rede subir"
+    for i in $(seq 1 $RNDIS_TIMEOUT); do
+        sleep 1
+        echo -n "."
+        if rndis_ativa; then
+            echo ""
+            break
+        fi
+        if [ "$i" -eq "$RNDIS_TIMEOUT" ]; then
+            echo ""
+            echo "[ERRO] Rede USB não subiu após ${RNDIS_TIMEOUT}s."
+            echo "       Verifique o cabo e tente novamente."
+            exit 1
+        fi
+    done
+
+    IP_PC=$(ip addr 2>/dev/null | grep "${RNDIS_IP}" | awk '{print $2}' | cut -d/ -f1)
+    echo "[OK] Rede USB ativa. IP do PC: ${IP_PC}"
+fi
+
+# --- Iniciar WiVRn ---
+echo "[..] Iniciando WiVRn server..."
+systemctl --user start wivrn.service
+
+sleep 1
+
+if systemctl --user is-active --quiet wivrn.service; then
+    IP_PC=$(ip addr 2>/dev/null | grep "${RNDIS_IP}" | awk '{print $2}' | cut -d/ -f1)
+    echo "[OK] WiVRn iniciado com sucesso."
+    echo ""
+    echo "  No Pico 4: abra o app WiVRn e conecte ao IP ${IP_PC}"
+    echo ""
+    journalctl --user -u wivrn.service --no-pager -n 3 2>/dev/null
+else
+    echo "[ERRO] Falha ao iniciar WiVRn."
+    journalctl --user -u wivrn.service --no-pager -n 10 2>/dev/null
+    exit 1
+fi

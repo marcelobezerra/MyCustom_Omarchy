@@ -1,0 +1,6 @@
+[Match]
+MACAddress=3a:71:ea:ac:48:bc
+
+[Network]
+Address=192.168.42.16/24
+IPv6AcceptRA=no

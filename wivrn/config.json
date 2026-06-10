@@ -1,0 +1,13 @@
+{
+    "scale": 1.0,
+    "bitrate": 100000000,
+    "tcp-only": true,
+    "encoders": [
+        {
+            "encoder": "nvenc",
+            "codec": "h264",
+            "width": 1.0,
+            "height": 1.0
+        }
+    ]
+}

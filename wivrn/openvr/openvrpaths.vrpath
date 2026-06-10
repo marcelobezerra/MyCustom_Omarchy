@@ -1,0 +1,17 @@
+{
+	"config" : 
+	[
+		"/home/richthofen/.local/share/Steam/config"
+	],
+	"external_drivers" : null,
+	"jsonid" : "vrpathreg",
+	"log" : 
+	[
+		"/home/richthofen/.local/share/Steam/logs"
+	],
+	"runtime" : 
+	[
+		"/opt/opencomposite"
+	],
+	"version" : 1
+}
