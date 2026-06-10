@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Para o WiVRn server.
+
+if ! systemctl --user is-active --quiet wivrn.service; then
+    echo "WiVRn não está rodando."
+    exit 0
+fi
+
+systemctl --user stop wivrn.service
+echo "[OK] WiVRn parado."
