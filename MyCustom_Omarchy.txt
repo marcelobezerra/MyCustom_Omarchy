@@ -1,0 +1,537 @@
+===============================================================
+  MyCustom_Omarchy.txt
+  Personalizações e adaptações do ambiente Omarchy
+  Atualizado em: 2026-06-09 (revisão 2)
+===============================================================
+
+
+===============================================================
+  RESUMO GERAL DO SETUP PERSONALIZADO
+===============================================================
+
+Sistema base: ArchLinux rodando kernel CachyOS 7.0.11-1-cachyos + Omarchy (Hyprland / Wayland)
+Máquina: desktop AMD + GPU NVIDIA GA104 (RTX série 30)
+
+---------------------------------------------------------------
+MONITORES
+---------------------------------------------------------------
+Dual monitor com portas DisplayPort. Após troca de cabos, as
+portas foram reassociadas:
+
+  DP-2 → LG ULTRAWIDE 3440x1440 @ 144Hz (principal, landscape)
+           Workspaces 1 a 8 | posição: direita da área de trabalho
+  DP-1 → ASUS XG27ACS 2560x1440 @ 144Hz (secundário, portrait 90°)
+           Workspace 9 | posição: esquerda, modo vertical
+
+Configurado via nwg-displays. Ambos com bitdepth 10 e escala 1.0.
+Os workspaces persistentes são definidos no waybar para garantir
+que cada monitor exiba apenas seus próprios workspaces.
+
+---------------------------------------------------------------
+ÁUDIO
+---------------------------------------------------------------
+Setup com dois caminhos de áudio:
+
+  Sink padrão: HDMI → LG ULTRAWIDE (Card 0 / GPU GA104)
+               Áudio principal do sistema vai para o monitor
+
+  Analógico:   Placa-mãe Starship/Matisse (Card 1)
+               Mantida com volume máximo (100%) para uso de fones
+               de ouvido via jack 3.5mm
+
+O script fix-audio.sh (executado no boot via autostart) garante:
+  - Setar dinamicamente o sink HDMI como padrão via pactl
+  - Manter o card analógico desbloqueado com Auto-Mute desativado
+
+---------------------------------------------------------------
+WAYBAR
+---------------------------------------------------------------
+Barra customizada com os seguintes ajustes em relação ao padrão:
+
+  - Clock em pt_BR: exibe dia da semana, data completa e hora
+  - netspeed: velocidade de download/upload em tempo real (atualiza a cada 2s)
+  - network: ao clicar exibe notificação com IP, máscara, gateway,
+             DNS e tráfego acumulado (RX/TX) via network-info.sh
+  - Tray com drawer expansível (oculto por padrão, expande ao passar o mouse)
+  - Workspaces numerados (1–9) com ícone ativo diferenciado
+
+---------------------------------------------------------------
+WORKSPACES
+---------------------------------------------------------------
+  Workspaces 1–8: fixos no DP-2 (LG ULTRAWIDE) | default: workspace 1
+  Workspace 9:    fixo no DP-1 (ASUS portrait)  | default: workspace 9
+
+Cada monitor inicia com seu próprio workspace padrão.
+Os workspaces são persistentes: aparecem na barra mesmo sem janelas abertas.
+
+---------------------------------------------------------------
+IPv6
+---------------------------------------------------------------
+IPv6 completamente desabilitado em dois níveis:
+
+  1. Parâmetro de kernel (nível mais agressivo):
+     ipv6.disable=1 em /etc/default/limine
+     → Remove o stack IPv6 inteiro do kernel, incluindo AF_INET6
+
+  2. Sysctl (redundante, mas mantido):
+     /etc/sysctl.d/40-ipv6.conf
+     → net.ipv6.conf.all/default/lo.disable_ipv6 = 1
+
+Impacto: qualquer software que tente criar sockets AF_INET6 falha.
+Ver seção WiVRn para o workaround necessário.
+
+---------------------------------------------------------------
+VR — WiVRn + Pico 4 + Half-Life Alyx
+---------------------------------------------------------------
+Stack funcional para VR via USB (sem Wi-Fi):
+
+  Servidor:     wivrn-full-git r2553 (AUR)
+  Renderização: OpenComposite (em /opt/opencomposite/) — sem SteamVR
+  Jogo:         Half-Life Alyx via Steam + proton-cachyos-11
+  Headset:      Pico 4 com APK WiVRn r2553
+
+Rede USB (RNDIS / ADB tethering):
+  - Pico conectado via USB; tethering ativado via adb
+  - IP fixo do PC: 192.168.42.16 (match por MAC no systemd-networkd)
+  - O cliente WiVRn no headset conecta diretamente ao IP do PC
+
+Workaround para ipv6.disable=1 (WiVRn usa sockets AF_INET6):
+  - Cópia do binário sem file capabilities: ~/.local/bin/wivrn-server-ipv4
+  - Shim LD_PRELOAD que redireciona AF_INET6 → AF_INET em tempo de execução
+  - Drop-in systemd injetando o binário alternativo + LD_PRELOAD
+  - tcp-only: true no config.json (sem IPv6, QUIC/UDP não funciona)
+  - Script wivrn-start detecta atualização do pacote e ressincronia a cópia
+
+Procedimento para jogar: conectar USB → rodar wivrn-start →
+abrir WiVRn no headset → lançar HL:A pela Steam.
+
+---------------------------------------------------------------
+INICIALIZAÇÃO AUTOMÁTICA (AUTOSTART)
+---------------------------------------------------------------
+  - OpenRGB: inicia minimizado com perfil de iluminação "RED"
+  - fix-audio.sh: corrige sink padrão e volume analógico
+  - snixembed: compatibilidade com ícones de bandeja legados (AppIndicator)
+
+---------------------------------------------------------------
+SCREENSAVER E INATIVIDADE
+---------------------------------------------------------------
+  - 15 min sem uso → screensaver inicia em loop
+  - 60 min sem uso → monitores desligam (DPMS off)
+  - Sem bloqueio de tela automático (diferente do padrão Omarchy de 5 min)
+  - Timer de background de 45 min iniciado junto com o screensaver
+    garante o desligamento dos monitores mesmo que o screensaver
+    resete o contador interno do hypridle
+
+---------------------------------------------------------------
+TECLADO E MOUSE
+---------------------------------------------------------------
+  - Layout: us intl (permite acentos com teclas mortas: ã, é, ç)
+  - Caps Lock remapeado como Compose key
+  - repeat_rate: 40 | repeat_delay: 250ms (mais rápido e responsivo)
+  - NumLock ativado por padrão
+  - Mouse: sensitivity -0.35 (mais lento/preciso)
+
+---------------------------------------------------------------
+TEMA E APARÊNCIA
+---------------------------------------------------------------
+  - Tema ativo: Forest Green (custom, além dos temas padrão Omarchy)
+  - Fonte: JetBrainsMono Nerd Font
+  - Gaps internos e externos: 3px | Cantos arredondados: 8px
+  - Outros temas custom instalados: aether, lasthorizon
+
+---------------------------------------------------------------
+OPÇÕES DO KERNEL
+---------------------------------------------------------------
+Parâmetros customizados na cmdline do linux-cachyos (/boot/limine.conf):
+
+  quiet / splash          → boot silencioso sem mensagens de log na tela
+  mitigations=off         → mitigações de CPU desativadas (Spectre, Meltdown)
+                            para ganho de performance em uso pessoal
+  ipv6.disable=1          → stack IPv6 removido completamente do kernel
+  acpi_enforce_resources=lax → permite acesso de drivers a recursos ACPI
+                            sem conflito (sensores de hardware AMD)
+  loglevel=0              → apenas mensagens de emergência no console
+  systemd.show_status=false → oculta [OK]/[FAILED] do systemd no boot
+  rd.udev.log_level=0     → log do udev silenciado no initramfs
+  vt.global_cursor_default=0 → cursor piscante desativado no TTY
+  zswap.enabled=0         → zswap desativado (sistema usa zram do CachyOS)
+  nvidia-drm.modeset=1    → KMS da NVIDIA habilitado (obrigatório para Wayland)
+  nvidia_drm.fbdev=1      → framebuffer da NVIDIA habilitado para console TTY
+  threadirqs              → IRQs convertidas em threads (menor latência)
+
+Ver seção 11 para descrição detalhada de cada parâmetro.
+
+---------------------------------------------------------------
+OUTROS
+---------------------------------------------------------------
+  - Snapper (snapshots btrfs) removido e desativado permanentemente
+  - neo-matrix instalado (chuva digital estilo Matrix com katakana)
+  - Atalhos customizados para apps nativos e web (ver seção keybindings)
+  - Screensaver com arte ASCII "OMARCHY" customizada
+
+===============================================================
+
+
+---------------------------------------------------------------
+1. CONFIGURAÇÃO DE MONITORES
+   Arquivo: ~/.config/hypr/monitors.conf
+---------------------------------------------------------------
+
+Setup dual monitor configurado via nwg-displays.
+Nota: após troca dos cabos DisplayPort, as portas DP-1 e DP-2 foram
+invertidas em relação à configuração anterior.
+
+  Monitor Principal (DP-2): LG ULTRAWIDE
+    - Resolução: 3440x1440 (ultrawide 21:9)
+    - Taxa de atualização: 143.97 Hz
+    - Posição na área de trabalho: 1440x606 (eixo X,Y)
+    - Escala: 1.0 (sem escala)
+    - Profundidade de cor: 10-bit (bitdepth 10)
+    - Workspaces: 1 a 8
+
+  Monitor Secundário (DP-1): ASUS XG27ACS
+    - Resolução: 2560x1440
+    - Taxa de atualização: 143.97 Hz
+    - Posição na área de trabalho: 0x0 (à esquerda do principal)
+    - Escala: 1.0
+    - Profundidade de cor: 10-bit (bitdepth 10)
+    - Rotação: 90° (transform 1 — monitor em modo retrato/vertical)
+    - Workspace: 9
+
+
+---------------------------------------------------------------
+2. SCREENSAVER E GERENCIAMENTO DE INATIVIDADE
+   Arquivos: ~/.config/hypr/hypridle.conf
+             ~/.config/hypr/screensaver-start.sh
+             ~/.config/hypr/screensaver-stop.sh
+---------------------------------------------------------------
+
+Comportamento configurado:
+  - Após 15 minutos de inatividade → screensaver inicia e fica em loop
+  - Após 60 minutos de inatividade → monitores desligam (DPMS off)
+  - Ao retornar (mouse/teclado) → screensaver encerra, monitores religam
+  - Sem tela de bloqueio automática ao sair do screensaver
+
+Detalhes técnicos:
+  - O screensaver pode resetar o timer interno do hypridle, então foi
+    implementado um timer de background de 45 minutos (2700s) que é
+    iniciado junto com o screensaver. Assim o desligamento do monitor
+    ocorre sempre 60 minutos após o início da inatividade.
+  - Existe também um listener de fallback no hypridle para 3600s caso
+    o screensaver não resete o timer.
+  - O script screensaver-start.sh inicia o screensaver e o timer.
+  - O script screensaver-stop.sh encerra o screensaver, cancela o timer
+    e garante que os monitores estejam ligados.
+
+Observação: O padrão do Omarchy ativa o screensaver em 2.5 minutos e
+bloqueia a tela em 5 minutos. Esta configuração desativa o bloqueio
+automático e estende os tempos consideravelmente.
+
+
+---------------------------------------------------------------
+3. INICIALIZAÇÃO AUTOMÁTICA (AUTOSTART)
+   Arquivo: ~/.config/hypr/autostart.conf
+---------------------------------------------------------------
+
+Três processos adicionados para iniciar automaticamente com o sistema:
+
+  a) OpenRGB:
+     - Inicia minimizado (sem janela visível) na bandeja do sistema
+     - Carrega o perfil de iluminação RGB chamado "RED"
+     - Comando: openrgb --startminimized --profile "RED"
+
+  b) Fix de áudio (fix-audio.sh):
+     - Script customizado que corrige problema de áudio no boot
+     - Aguarda 3 segundos para o sistema estabilizar
+     - Define o HDMI do LG ULTRAWIDE como sink padrão de áudio
+     - Mantém a placa analógica (card 1) com volume máximo para uso de fones
+     - Desabilita o "Auto-Mute Mode" que silencia automaticamente saídas
+     - Ver seção 4 para detalhes
+
+  c) snixembed:
+     - Provê compatibilidade para ícones de bandeja (tray icons) de
+       aplicativos que usam o protocolo StatusNotifierItem/AppIndicator
+     - Comando: snixembed --fork
+
+
+---------------------------------------------------------------
+4. CORREÇÃO DE ÁUDIO NO BOOT
+   Arquivo: ~/.config/hypr/fix-audio.sh
+---------------------------------------------------------------
+
+Script executado automaticamente na inicialização do sistema.
+Resolve dois problemas: sink de áudio padrão incorreto e placa analógica
+iniciando silenciada ou com Auto-Mute Mode ativado.
+
+Ações executadas:
+  - sleep 3 → aguarda estabilização do sistema
+  - pactl list sinks short → localiza dinamicamente o sink HDMI
+  - pactl set-default-sink → define o HDMI (LG ULTRAWIDE) como saída padrão
+  - amixer -c 1 sset Headphone 100% unmute → volume máximo no fone (card 1)
+  - amixer -c 1 sset 'Auto-Mute Mode' Disabled → evita mute automático
+  - amixer -c 1 sset Master 100% unmute → volume máximo no master (card 1)
+
+Placas de áudio do sistema:
+  - Card 0: HDA NVidia (GPU — HDMI audio → LG ULTRAWIDE) ← sink padrão
+  - Card 1: HD-Audio Generic (placa-mãe — analógico → fone de ouvido)
+
+
+---------------------------------------------------------------
+5. TECLADO E MOUSE
+   Arquivo: ~/.config/hypr/input.conf
+---------------------------------------------------------------
+
+Teclado:
+  - Layout: us (inglês americano)
+  - Variante: intl (internacional — permite acentos e caracteres
+    especiais como ã, é, ç usando teclas mortas)
+  - Tecla Caps Lock remapeada como Compose key
+    (permite combinações como: Compose + ~ + a = ã)
+  - repeat_rate = 40 (repetição mais rápida ao segurar tecla)
+  - repeat_delay = 250ms (tempo até iniciar repetição — mais responsivo)
+  - NumLock ativado por padrão ao iniciar
+
+Mouse:
+  - sensitivity = -0.35 (movimento mais lento/preciso que o padrão)
+
+
+---------------------------------------------------------------
+6. TEMA E APARÊNCIA
+   Arquivos: ~/.config/omarchy/themes/
+             ~/.config/hypr/looknfeel.conf
+---------------------------------------------------------------
+
+Tema ativo: Forest Green
+Fonte ativa: JetBrainsMono Nerd Font
+
+Temas customizados instalados (além dos temas padrão do Omarchy):
+  - aether       → tema com paleta escura e tons etéreos
+  - forest-green → tema ativo, tons verdes e naturais
+  - lasthorizon  → tema com paleta escura inspirada em pôr do sol
+
+Ajustes de aparência (looknfeel.conf):
+  - Espaço entre janelas (gaps_in): 3px
+  - Espaço entre janelas e bordas da tela (gaps_out): 3px
+  - Cantos arredondados das janelas (rounding): 8px
+
+
+---------------------------------------------------------------
+7. SCREENSAVER BRANDING
+   Arquivo: ~/.config/omarchy/branding/screensaver.txt
+---------------------------------------------------------------
+
+O texto exibido pelo screensaver foi personalizado com uma arte ASCII
+customizada contendo o texto "OMARCHY" em fonte grande estilizada.
+Este texto é exibido com efeitos visuais aleatórios do TTE (Terminal
+Text Effects) em loop enquanto o screensaver está ativo.
+
+
+---------------------------------------------------------------
+8. TECLAS DE ATALHO PERSONALIZADAS (KEYBINDINGS)
+   Arquivo: ~/.config/hypr/bindings.conf
+---------------------------------------------------------------
+
+Aplicativos nativos:
+  SUPER + SHIFT + F         → Nautilus (gerenciador de arquivos)
+  SUPER + ALT + SHIFT + F   → Nautilus abrindo na pasta atual do terminal
+  SUPER + SHIFT + W         → Typora (editor Markdown)
+  SUPER + SHIFT + G         → Signal (mensagens)
+  SUPER + SHIFT + O         → Obsidian (notas)
+  SUPER + SHIFT + K         → OKM (One Key Manager — teclado)
+  SUPER + SHIFT + D         → Lazydocker (gerenciador Docker TUI)
+  SUPER + SHIFT + M         → Spotify
+  SUPER + SHIFT + ALT + M   → cliamp (player de música TUI)
+
+Aplicativos web (abrem no navegador):
+  SUPER + SHIFT + A         → ChatGPT
+  SUPER + SHIFT + ALT + A   → Grok
+  SUPER + SHIFT + C         → HEY Calendar
+  SUPER + SHIFT + E         → HEY Email
+  SUPER + SHIFT + Y         → YouTube
+  SUPER + SHIFT + ALT + G   → WhatsApp Web
+  SUPER + SHIFT + CTRL + G  → Google Messages
+  SUPER + SHIFT + P         → Google Photos
+  SUPER + SHIFT + X         → X (Twitter)
+  SUPER + SHIFT + ALT + X   → X — Criar novo post
+
+Senha e segurança:
+  SUPER + SHIFT + /         → 1Password
+
+
+---------------------------------------------------------------
+9. NEO-MATRIX (CHUVA DIGITAL ESTILO MATRIX)
+   Pacote AUR: neo-matrix-git
+---------------------------------------------------------------
+
+Substituto moderno do cmatrix com suporte a caracteres katakana
+japoneses reais, cores 32-bit e visual fiel ao filme The Matrix.
+
+Instalação:
+  yay -S neo-matrix-git
+  (instala também a dependência ttf-hanazono, fonte japonesa)
+
+Comando para executar:
+  neo-matrix
+
+Principais opções:
+  neo-matrix -c green     → cor verde clássica (padrão)
+  neo-matrix -s 90        → velocidade (padrão ~50)
+  neo-matrix -D           → modo denso (mais caracteres)
+  neo-matrix --help       → lista completa de opções
+
+Observação: o binário se chama neo-matrix (não neo). Para usar
+o atalho "neo", adicione ao .bashrc/.zshrc:
+  alias neo='neo-matrix'
+
+Caracteres exibidos: katakana half-width (ｱｲｳｴｵ...) misturados
+com símbolos ASCII — o mesmo estilo usado no filme.
+
+
+---------------------------------------------------------------
+10. REMOÇÃO E DESATIVAÇÃO DE SNAPSHOTS (SNAPPER)
+---------------------------------------------------------------
+
+O Omarchy cria snapshots automáticos do sistema via snapper a cada
+hora (timeline) e também durante o omarchy update. Esta configuração
+remove os snapshots existentes e desativa permanentemente o recurso.
+
+Motivo para desativar:
+  Snapshots de btrfs consomem espaço em disco progressivamente e não
+  eram desejados neste setup.
+
+Comandos executados para desativar:
+
+  1. Remover todos os snapshots existentes:
+     sudo snapper -c root delete --sync 76-86
+
+  2. Desativar serviços e timers do snapper:
+     sudo systemctl disable --now snapper-timeline.timer
+     sudo systemctl disable --now snapper-cleanup.timer
+     sudo systemctl disable --now snapperd.service
+     sudo systemctl disable --now limine-snapper-sync.service
+
+  3. Desinstalar snapper e integração com bootloader:
+     sudo pacman -Rns snapper limine-snapper-sync
+
+Impacto no omarchy update:
+  Nenhum. O omarchy-update verifica se o snapper está instalado —
+  se não estiver, ignora a criação de snapshot (exit 127) e continua
+  normalmente.
+
+Impacto em outros comandos:
+  - omarchy-refresh-limine: chamava limine-snapper-sync no final
+    (não crítico, raramente usado)
+  - omarchy snapshot restore: deixa de funcionar (intencional)
+
+
+---------------------------------------------------------------
+11. OPÇÕES DO KERNEL (linux-cachyos)
+    Arquivo: /boot/limine.conf
+    Gerenciado por: limine-entry-tool + /etc/default/limine
+---------------------------------------------------------------
+
+Linha cmdline completa do entry linux-cachyos no limine.conf:
+
+  quiet splash mitigations=off ipv6.disable=1
+  acpi_enforce_resources=lax loglevel=0 systemd.show_status=false
+  rd.udev.log_level=0 vt.global_cursor_default=0
+  root=PARTUUID=947343fb-8546-4a35-b813-629e2a8af124
+  zswap.enabled=0 rootflags=subvol=@ rw rootfstype=btrfs
+  nvidia-drm.modeset=1 nvidia_drm.fbdev=1 threadirqs
+
+Nota: as opções marcadas com (*) são configuradas manualmente em
+/etc/default/limine via KERNEL_CMDLINE[default]. As demais são
+geradas automaticamente pelo limine-entry-tool com base no sistema.
+
+Descrição de cada opção:
+
+  quiet (*)
+    Suprime as mensagens de log do kernel durante o boot.
+    Resultado: tela limpa, sem flood de texto na inicialização.
+
+  splash (*)
+    Sinaliza ao sistema que uma tela de splash está ativa.
+    Complementa o "quiet" para que o Plymouth (ou equivalente)
+    assuma a exibição durante o boot.
+
+  mitigations=off (*)
+    Desativa todas as mitigações de segurança de CPU do kernel:
+    Spectre, Meltdown, MDS, TAA, etc. Aumenta a performance em
+    workloads CPU-intensivos. Aceitável em máquina pessoal sem
+    exposição a código não confiável em ambientes compartilhados.
+
+  ipv6.disable=1 (*)
+    Remove completamente o stack IPv6 do kernel em tempo de boot.
+    Mais agressivo que o sysctl: impossibilita criação de qualquer
+    socket AF_INET6, inclusive internamente em daemons. Exigiu
+    workaround com shim LD_PRELOAD para o WiVRn (ver seção WiVRn).
+
+  acpi_enforce_resources=lax (*)
+    Relaxa a validação de recursos ACPI. Permite que drivers do
+    kernel acessem portas I/O e regiões de memória reservadas pelo
+    ACPI sem gerar conflito. Necessário para funcionamento correto
+    de certos sensores de hardware (ex: chips de monitoramento de
+    temperatura e voltagem em algumas placas-mãe AMD).
+
+  loglevel=0 (*)
+    Define o nível de verbosidade do log do kernel como 0
+    (KERN_EMERG). Apenas mensagens de emergência aparecem no
+    console; todo o resto é suprimido. Complementa o "quiet".
+
+  systemd.show_status=false (*)
+    Desativa a exibição dos status de inicialização do systemd
+    na tela (as linhas [  OK  ] / [FAILED] que aparecem durante
+    o boot). Mantém a tela limpa enquanto os serviços sobem.
+
+  rd.udev.log_level=0 (*)
+    Reduz o nível de log do udev dentro do initramfs (initrd)
+    para silencioso. Evita mensagens de detecção de dispositivos
+    durante a fase inicial do boot.
+
+  vt.global_cursor_default=0 (*)
+    Desativa o cursor piscante nos terminais virtuais (TTY).
+    Impede que o cursor apareça brevemente na tela antes do
+    Hyprland/Wayland assumir o display.
+
+  root=PARTUUID=947343fb-8546-4a35-b813-629e2a8af124
+    Identifica a partição root pelo PARTUUID (UUID da partição,
+    não do filesystem). Gerado automaticamente pelo limine-entry-tool.
+
+  zswap.enabled=0
+    Desativa o zswap, que é um cache comprimido em RAM usado como
+    front-end para o swap em disco. Desativado porque o sistema
+    utiliza zram (swap comprimido em RAM nativo do CachyOS),
+    tornando o zswap redundante e potencialmente conflitante.
+
+  rootflags=subvol=@
+    Instrui o kernel a montar o subvolume btrfs chamado "@" como
+    root do sistema. Convenção padrão do layout btrfs do CachyOS/Arch.
+
+  rw
+    Monta a partição root em modo leitura e escrita desde o boot.
+    Sem isso, o root seria montado como somente leitura inicialmente.
+
+  rootfstype=btrfs
+    Informa explicitamente ao kernel que o filesystem root é btrfs.
+    Evita que o kernel precise detectá-lo automaticamente.
+
+  nvidia-drm.modeset=1
+    Habilita o DRM kernel modesetting (KMS) no driver proprietário
+    da NVIDIA. Obrigatório para Wayland/Hyprland com GPU NVIDIA.
+    Sem isso, o compositor Wayland não consegue inicializar.
+
+  nvidia_drm.fbdev=1
+    Habilita o framebuffer device do módulo DRM da NVIDIA.
+    Permite que o console virtual (TTY) use a GPU via fbdev,
+    mantendo resolução nativa mesmo fora do Wayland.
+
+  threadirqs
+    Converte as rotinas de tratamento de interrupção (IRQs) em
+    threads do kernel com prioridade ajustável. Reduz latência de
+    resposta a eventos de hardware (input, áudio, rede). Beneficia
+    gaming, áudio de baixa latência e workloads interativos.
+
+
+===============================================================
+  Fim do arquivo
+===============================================================
