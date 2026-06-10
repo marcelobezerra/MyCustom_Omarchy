@@ -190,6 +190,33 @@ Arquivo de referência de pacotes:
   após o Omarchy 3.8.2, dividida por data de instalação.
   O restore.sh usa este arquivo como fonte para reinstalar tudo.
 
+---------------------------------------------------------------
+RASTREAMENTO AUTOMÁTICO DE PACOTES (Hook do Pacman)
+---------------------------------------------------------------
+Um hook do pacman atualiza o pacotes.txt e sincroniza com o
+GitHub automaticamente sempre que um pacote é instalado, seja
+pelo menu do Omarchy, pacman -S ou yay -S.
+
+Arquivos do hook:
+  /etc/pacman.d/hooks/99-update-pacotes.hook
+    → Dispara após cada transação de instalação (PostTransaction)
+
+  /usr/local/bin/update-pacotes-hook.sh
+    → Script executado pelo hook. Lógica:
+      1. Lê o log do pacman (/var/log/pacman.log) para identificar
+         os pacotes instalados na última transação
+      2. Filtra apenas pacotes instalados explicitamente
+         (ignora dependências automáticas)
+      3. Ignora pacotes já presentes no pacotes.txt
+      4. Adiciona os novos com seção de data (# --- YYYY-MM-DD ---)
+      5. Faz git commit + push para o GitHub automaticamente
+
+  /home/richthofen/MyCustom_Omarchy_repo/
+    → Clone permanente do repositório usado pelo hook para os pushes
+
+Nota: remoções de pacotes NÃO são rastreadas automaticamente.
+Ao desinstalar um pacote, remova-o manualmente do pacotes.txt.
+
 Pendências manuais após o restore (não automatizáveis):
   - Reiniciar o sistema (aplicar parâmetros do kernel)
   - Instalar APK WiVRn r2553 no Pico 4
