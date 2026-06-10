@@ -178,11 +178,17 @@ ser restauradas executando o script restore.sh do repositório:
   bash restore.sh
 
 O script solicita a senha sudo uma vez e automatiza:
-  - Instalação de pacotes (pacman + AUR via yay)
+  - Instalação de todos os pacotes listados em pacotes.txt (via yay,
+    que resolve dependências e cobre repositórios oficiais + AUR)
   - Compilação do shim IPv4 para WiVRn
   - Cópia de todos os arquivos de configuração
   - Injeção dos parâmetros customizados do kernel no limine
   - Reload de serviços e habilitação do WiVRn
+
+Arquivo de referência de pacotes:
+  pacotes.txt — lista cronológica de todos os pacotes instalados
+  após o Omarchy 3.8.2, dividida por data de instalação.
+  O restore.sh usa este arquivo como fonte para reinstalar tudo.
 
 Pendências manuais após o restore (não automatizáveis):
   - Reiniciar o sistema (aplicar parâmetros do kernel)
