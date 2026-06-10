@@ -345,7 +345,6 @@ jdk-openjdk
 libnet
 jdk21-openjdk
 maven
-muon-ssh
 libnma-common
 libnma-gtk4
 mobile-broadband-provider-info
@@ -357,8 +356,6 @@ strongswan
 nmap
 tcpdump
 traceroute
-thunderbird
-thunderbird-i18n-pt-br
 
 # --- 2026-06-09 ---
 

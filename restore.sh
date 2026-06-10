@@ -49,45 +49,40 @@ log "Sudo autenticado."
 # ---------------------------------------------------------------------------
 # Instalação de pacotes
 # ---------------------------------------------------------------------------
-header "PACOTES — REPOSITÓRIOS OFICIAIS (pacman)"
+header "BOOTSTRAP — FERRAMENTAS ESSENCIAIS"
 
-PACMAN_PKGS=(
-    android-tools       # adb — WiVRn USB tethering
-    jq                  # weather.sh e hook Claude
-    gcc                 # compilar wivrn_ipv4_shim.c
-    openrgb             # iluminação RGB
-    coolercontrol       # controle de fans e sensores
-    github-cli          # gh — download de APKs do WiVRn
-)
+info "Instalando ferramentas necessárias para as próximas etapas do restore..."
+sudo pacman -S --needed --noconfirm gcc jq github-cli
+log "Bootstrap concluído."
 
-info "Instalando com pacman..."
-sudo pacman -S --needed --noconfirm "${PACMAN_PKGS[@]}"
-log "Pacotes pacman instalados."
+header "PACOTES — INSTALAÇÃO COMPLETA (pacotes.txt)"
 
-header "PACOTES — AUR (yay)"
+PACOTES_FILE="$REPO_DIR/pacotes.txt"
+[ -f "$PACOTES_FILE" ] || err "pacotes.txt não encontrado em $REPO_DIR"
 
-AUR_PKGS=(
-    snixembed           # tray icons AppIndicator/StatusNotifierItem
-    wivrn-full-git      # servidor WiVRn com fixes NVIDIA encoder
-    opencomposite-git   # substituto do SteamVR (instala em /opt/opencomposite)
-    neo-matrix-git      # chuva digital estilo Matrix com katakana
-    protonup-qt         # gerenciador de versões do Proton
-)
+mapfile -t PKGS_ALL < <(grep -v '^\s*#' "$PACOTES_FILE" | grep -v '^\s*$')
+info "Total de pacotes na lista: ${#PKGS_ALL[@]}"
+info "Instalando via yay (oficial + AUR). Dependências resolvidas automaticamente."
+info "A compilação de pacotes AUR pode demorar bastante — aguarde..."
 
-info "Instalando com yay (pode demorar na compilação do WiVRn)..."
-yay -S --needed --noconfirm "${AUR_PKGS[@]}"
-log "Pacotes AUR instalados."
-
-header "PROTON CACHYOS"
-
-if pacman -Q proton-cachyos &>/dev/null; then
-    log "proton-cachyos já instalado."
+FAILED_PKGS=()
+if yay -S --needed --noconfirm "${PKGS_ALL[@]}"; then
+    log "Todos os pacotes instalados com sucesso."
 else
-    info "Instalando proton-cachyos..."
-    sudo pacman -S --needed --noconfirm proton-cachyos 2>/dev/null || \
-        yay -S --needed --noconfirm proton-cachyos 2>/dev/null || \
-        warn "proton-cachyos não encontrado — instale manualmente via ProtonUp-Qt."
+    warn "Falha no lote. Instalando individualmente para identificar problemas..."
+    for pkg in "${PKGS_ALL[@]}"; do
+        yay -S --needed --noconfirm "$pkg" &>/dev/null || FAILED_PKGS+=("$pkg")
+    done
+    if [ ${#FAILED_PKGS[@]} -gt 0 ]; then
+        warn "Pacotes que falharam (renomeados, removidos do AUR ou conflito):"
+        for p in "${FAILED_PKGS[@]}"; do echo "  - $p"; done
+        warn "Instale manualmente se necessário."
+    else
+        log "Todos os pacotes instalados (via retry individual)."
+    fi
 fi
+
+log "Instalação de pacotes concluída."
 
 # ---------------------------------------------------------------------------
 # Compilar shim IPv4 para WiVRn
