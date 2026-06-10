@@ -52,6 +52,8 @@ Barra customizada com os seguintes ajustes em relação ao padrão:
   - netspeed: velocidade de download/upload em tempo real (atualiza a cada 2s)
   - network: ao clicar exibe notificação com IP, máscara, gateway,
              DNS e tráfego acumulado (RX/TX) via network-info.sh
+  - weather: tooltip customizado exibe condições atuais + METAR e TAF
+             do aeroporto Salgado Filho (SBPA) ao passar o mouse no ícone
   - Tray com drawer expansível (oculto por padrão, expande ao passar o mouse)
   - Workspaces numerados (1–9) com ícone ativo diferenciado
 
