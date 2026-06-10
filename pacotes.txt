@@ -364,4 +364,3 @@ ttf-hanazono
 neo-matrix-git
 neo-matrix-git-debug
 joyutils
-sl
