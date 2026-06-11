@@ -370,3 +370,4 @@ joyutils
 opencl-headers
 libcpuid
 cpu-x-git
+geekbench
