@@ -364,3 +364,8 @@ ttf-hanazono
 neo-matrix-git
 neo-matrix-git-debug
 joyutils
+
+# --- 2026-06-11 ---
+
+opencl-headers
+libcpuid
