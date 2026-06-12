@@ -371,3 +371,4 @@ opencl-headers
 libcpuid
 cpu-x-git
 geekbench
+python-pip
