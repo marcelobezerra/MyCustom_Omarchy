@@ -372,3 +372,8 @@ libcpuid
 cpu-x-git
 geekbench
 python-pip
+
+# --- 2026-06-23 ---
+
+proton-cachyos-native
+proton-cachyos-slr
