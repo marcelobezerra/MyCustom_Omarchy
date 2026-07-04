@@ -1,7 +1,7 @@
 ===============================================================
   MyCustom_Omarchy.txt
   Personalizações e adaptações do ambiente Omarchy
-  Atualizado em: 2026-07-03 (revisão 3)
+  Atualizado em: 2026-07-03 (revisão 4)
 ===============================================================
 
 
@@ -461,6 +461,9 @@ Aplicativos web (abrem no navegador):
 
 Senha e segurança:
   SUPER + SHIFT + /         → 1Password
+
+Sistema:
+  SUPER + SHIFT + S         → Screensaver (ativação manual imediata)
 
 
 ---------------------------------------------------------------
