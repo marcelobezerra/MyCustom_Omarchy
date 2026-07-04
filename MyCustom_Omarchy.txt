@@ -1,7 +1,7 @@
 ===============================================================
   MyCustom_Omarchy.txt
   Personalizações e adaptações do ambiente Omarchy
-  Atualizado em: 2026-07-03 (revisão 4)
+  Atualizado em: 2026-07-04 (revisão 5)
 ===============================================================
 
 
@@ -324,8 +324,12 @@ Correção de race condition (screensaver morto instantaneamente):
     Salva o timestamp de início em /tmp/screensaver-started.ts
 
   Solução em screensaver-stop.sh:
+    O cancelamento do timer DPMS acontece sempre, antes de qualquer
+    verificação — evita timer órfão que apagaria os monitores mesmo
+    após o screensaver ter sido encerrado manualmente.
     Período de graça de 5 segundos: se o screensaver iniciou há menos
-    de 5 segundos, ignora o sinal de on-resume (resume espúrio).
+    de 5 segundos, ignora o sinal de on-resume (resume espúrio) e não
+    mata o screensaver, mas o timer DPMS já foi cancelado.
     Após 5 segundos, qualquer input do usuário encerra normalmente.
 
 Observação: O padrão do Omarchy ativa o screensaver em 2.5 minutos e
