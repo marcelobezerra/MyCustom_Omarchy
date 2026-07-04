@@ -1,7 +1,7 @@
 ===============================================================
   MyCustom_Omarchy.txt
   Personalizações e adaptações do ambiente Omarchy
-  Atualizado em: 2026-06-09 (revisão 2)
+  Atualizado em: 2026-07-03 (revisão 3)
 ===============================================================
 
 
@@ -127,6 +127,10 @@ SCREENSAVER E INATIVIDADE
   - Timer de background de 45 min iniciado junto com o screensaver
     garante o desligamento dos monitores mesmo que o screensaver
     resete o contador interno do hypridle
+  - Screensaver ativa obrigatoriamente mesmo com browsers tocando mídia
+    (YouTube, vídeos, etc.) — inibidores D-Bus, Wayland e systemd ignorados
+  - Correção de race condition: on-resume espúrio ignorado nos primeiros
+    5 segundos após o início do screensaver
 
 ---------------------------------------------------------------
 TECLADO E MOUSE
@@ -267,6 +271,7 @@ invertidas em relação à configuração anterior.
    Arquivos: ~/.config/hypr/hypridle.conf
              ~/.config/hypr/screensaver-start.sh
              ~/.config/hypr/screensaver-stop.sh
+             ~/.config/hypr/hyprland.conf
 ---------------------------------------------------------------
 
 Comportamento configurado:
@@ -274,6 +279,7 @@ Comportamento configurado:
   - Após 60 minutos de inatividade → monitores desligam (DPMS off)
   - Ao retornar (mouse/teclado) → screensaver encerra, monitores religam
   - Sem tela de bloqueio automática ao sair do screensaver
+  - Screensaver ativa obrigatoriamente mesmo com browsers tocando mídia
 
 Detalhes técnicos:
   - O screensaver pode resetar o timer interno do hypridle, então foi
@@ -285,6 +291,42 @@ Detalhes técnicos:
   - O script screensaver-start.sh inicia o screensaver e o timer.
   - O script screensaver-stop.sh encerra o screensaver, cancela o timer
     e garante que os monitores estejam ligados.
+
+Correção de inibidores de idle (browsers/mídia):
+  Browsers como Chrome e Firefox impedem o idle de duas formas:
+  a) Via D-Bus (org.freedesktop.ScreenSaver) — usado por qualquer app
+  b) Via protocolo Wayland zwp_idle_inhibit_v1 — usado por browsers ao
+     tocar vídeo/áudio (ex: YouTube ao vivo, Netflix)
+  c) Via systemd idle inhibit
+
+  Quando qualquer um desses mecanismos está ativo, o Hyprland e/ou
+  o hypridle param de contar o tempo de inatividade, impedindo o
+  screensaver de ativar.
+
+  Solução aplicada em ~/.config/hypr/hypridle.conf (bloco general):
+    ignore-dbus-inhibit = true       → ignora inibidores via D-Bus
+    ignore_wayland_inhibit = true    → ignora inibidores via Wayland
+    ignore_systemd_inhibit = true    → ignora inibidores via systemd
+
+  Solução adicional em ~/.config/hypr/hyprland.conf (window rules):
+    windowrule = idle_inhibit none, match:class ^(chrome.*)$
+    windowrule = idle_inhibit none, match:class ^(firefox)$
+  → Impede que novas janelas de browser definam inibidores de idle
+
+Correção de race condition (screensaver morto instantaneamente):
+  Quando o hypridle dispara o on-timeout e o omarchy-launch-screensaver
+  usa hyprctl dispatch exec para abrir o Alacritty, o Hyprland reseta
+  internamente o idle timer (troca de foco de janela). Isso faz o
+  hypridle disparar on-resume imediatamente, matando o screensaver antes
+  de ele aparecer na tela.
+
+  Solução em screensaver-start.sh:
+    Salva o timestamp de início em /tmp/screensaver-started.ts
+
+  Solução em screensaver-stop.sh:
+    Período de graça de 5 segundos: se o screensaver iniciou há menos
+    de 5 segundos, ignora o sinal de on-resume (resume espúrio).
+    Após 5 segundos, qualquer input do usuário encerra normalmente.
 
 Observação: O padrão do Omarchy ativa o screensaver em 2.5 minutos e
 bloqueia a tela em 5 minutos. Esta configuração desativa o bloqueio
