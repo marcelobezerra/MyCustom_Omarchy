@@ -1,7 +1,7 @@
 ===============================================================
   MyCustom_Omarchy.txt
   Personalizações e adaptações do ambiente Omarchy
-  Atualizado em: 2026-07-04 (revisão 5)
+  Atualizado em: 2026-07-04 (revisão 6)
 ===============================================================
 
 
@@ -121,16 +121,11 @@ INICIALIZAÇÃO AUTOMÁTICA (AUTOSTART)
 ---------------------------------------------------------------
 SCREENSAVER E INATIVIDADE
 ---------------------------------------------------------------
-  - 15 min sem uso → screensaver inicia em loop
-  - 60 min sem uso → monitores desligam (DPMS off)
-  - Sem bloqueio de tela automático (diferente do padrão Omarchy de 5 min)
-  - Timer de background de 45 min iniciado junto com o screensaver
-    garante o desligamento dos monitores mesmo que o screensaver
-    resete o contador interno do hypridle
-  - Screensaver ativa obrigatoriamente mesmo com browsers tocando mídia
-    (YouTube, vídeos, etc.) — inibidores D-Bus, Wayland e systemd ignorados
-  - Correção de race condition: on-resume espúrio ignorado nos primeiros
-    5 segundos após o início do screensaver
+  - Screensaver ativado apenas manualmente via SUPER+SHIFT+S
+  - Ao sair do screensaver (qualquer tecla/mouse) → tela de bloqueio
+    com senha (hyprlock)
+  - 2 horas sem uso → monitores desligam (DPMS off), sem bloqueio
+  - Sem screensaver automático, sem bloqueio automático
 
 ---------------------------------------------------------------
 TECLADO E MOUSE
@@ -269,72 +264,42 @@ invertidas em relação à configuração anterior.
 ---------------------------------------------------------------
 2. SCREENSAVER E GERENCIAMENTO DE INATIVIDADE
    Arquivos: ~/.config/hypr/hypridle.conf
-             ~/.config/hypr/screensaver-start.sh
-             ~/.config/hypr/screensaver-stop.sh
+             ~/.config/hypr/screensaver-lock.sh
              ~/.config/hypr/hyprland.conf
 ---------------------------------------------------------------
 
 Comportamento configurado:
-  - Após 15 minutos de inatividade → screensaver inicia e fica em loop
-  - Após 60 minutos de inatividade → monitores desligam (DPMS off)
-  - Ao retornar (mouse/teclado) → screensaver encerra, monitores religam
-  - Sem tela de bloqueio automática ao sair do screensaver
-  - Screensaver ativa obrigatoriamente mesmo com browsers tocando mídia
+  - Screensaver ativado apenas manualmente via SUPER+SHIFT+S
+  - Ao sair do screensaver (qualquer tecla/mouse) → hyprlock solicita senha
+  - Após 2 horas de inatividade → monitores desligam (DPMS off)
+  - Sem screensaver automático, sem bloqueio automático de tela
 
 Detalhes técnicos:
-  - O screensaver pode resetar o timer interno do hypridle, então foi
-    implementado um timer de background de 45 minutos (2700s) que é
-    iniciado junto com o screensaver. Assim o desligamento do monitor
-    ocorre sempre 60 minutos após o início da inatividade.
-  - Existe também um listener de fallback no hypridle para 3600s caso
-    o screensaver não resete o timer.
-  - O script screensaver-start.sh inicia o screensaver e o timer.
-  - O script screensaver-stop.sh encerra o screensaver, cancela o timer
-    e garante que os monitores estejam ligados.
+  O atalho SUPER+SHIFT+S executa ~/.config/hypr/screensaver-lock.sh que:
+    1. Chama omarchy-launch-screensaver force
+    2. Aguarda 3 segundos para o screensaver iniciar
+    3. Monitora o processo org.omarchy.screensaver em loop (sleep 1)
+    4. Quando o processo encerra (usuário pressionou tecla/mouse),
+       chama omarchy-system-lock para exibir a tela de bloqueio
 
-Correção de inibidores de idle (browsers/mídia):
-  Browsers como Chrome e Firefox impedem o idle de duas formas:
-  a) Via D-Bus (org.freedesktop.ScreenSaver) — usado por qualquer app
-  b) Via protocolo Wayland zwp_idle_inhibit_v1 — usado por browsers ao
-     tocar vídeo/áudio (ex: YouTube ao vivo, Netflix)
-  c) Via systemd idle inhibit
+  O hypridle mantém apenas um listener:
+    timeout = 7200 → hyprctl dispatch dpms off (monitores apagam)
+    on-resume      → hyprctl dispatch dpms on  (monitores religam)
 
-  Quando qualquer um desses mecanismos está ativo, o Hyprland e/ou
-  o hypridle param de contar o tempo de inatividade, impedindo o
-  screensaver de ativar.
-
-  Solução aplicada em ~/.config/hypr/hypridle.conf (bloco general):
+Inibidores de idle (configurados mesmo sem screensaver automático,
+pois afetam o contador do DPMS de 2 horas):
+  Solução em ~/.config/hypr/hypridle.conf (bloco general):
     ignore-dbus-inhibit = true       → ignora inibidores via D-Bus
     ignore_wayland_inhibit = true    → ignora inibidores via Wayland
     ignore_systemd_inhibit = true    → ignora inibidores via systemd
 
-  Solução adicional em ~/.config/hypr/hyprland.conf (window rules):
+  Solução em ~/.config/hypr/hyprland.conf (window rules):
     windowrule = idle_inhibit none, match:class ^(chrome.*)$
     windowrule = idle_inhibit none, match:class ^(firefox)$
-  → Impede que novas janelas de browser definam inibidores de idle
-
-Correção de race condition (screensaver morto instantaneamente):
-  Quando o hypridle dispara o on-timeout e o omarchy-launch-screensaver
-  usa hyprctl dispatch exec para abrir o Alacritty, o Hyprland reseta
-  internamente o idle timer (troca de foco de janela). Isso faz o
-  hypridle disparar on-resume imediatamente, matando o screensaver antes
-  de ele aparecer na tela.
-
-  Solução em screensaver-start.sh:
-    Salva o timestamp de início em /tmp/screensaver-started.ts
-
-  Solução em screensaver-stop.sh:
-    O cancelamento do timer DPMS acontece sempre, antes de qualquer
-    verificação — evita timer órfão que apagaria os monitores mesmo
-    após o screensaver ter sido encerrado manualmente.
-    Período de graça de 5 segundos: se o screensaver iniciou há menos
-    de 5 segundos, ignora o sinal de on-resume (resume espúrio) e não
-    mata o screensaver, mas o timer DPMS já foi cancelado.
-    Após 5 segundos, qualquer input do usuário encerra normalmente.
 
 Observação: O padrão do Omarchy ativa o screensaver em 2.5 minutos e
-bloqueia a tela em 5 minutos. Esta configuração desativa o bloqueio
-automático e estende os tempos consideravelmente.
+bloqueia a tela em 5 minutos. Esta configuração remove o automatismo
+e deixa o controle totalmente manual.
 
 
 ---------------------------------------------------------------
@@ -467,7 +432,7 @@ Senha e segurança:
   SUPER + SHIFT + /         → 1Password
 
 Sistema:
-  SUPER + SHIFT + S         → Screensaver (ativação manual imediata)
+  SUPER + SHIFT + S         → Screensaver (ativa manualmente; bloqueia tela ao sair)
 
 
 ---------------------------------------------------------------
