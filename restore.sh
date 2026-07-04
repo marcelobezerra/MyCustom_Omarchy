@@ -169,6 +169,11 @@ mkdir -p ~/.config/omarchy/branding
 cp "$REPO_DIR/omarchy/screensaver.txt" ~/.config/omarchy/branding/
 log "~/.config/omarchy/branding/screensaver.txt"
 
+header "DOCS — MYCUSTOM_OMARCHY"
+
+cp "$REPO_DIR/MyCustom_Omarchy.txt" ~/MyCustom_Omarchy.txt
+log "~/MyCustom_Omarchy.txt"
+
 # ---------------------------------------------------------------------------
 # Arquivos de sistema
 # ---------------------------------------------------------------------------
