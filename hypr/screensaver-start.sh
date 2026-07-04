@@ -1,5 +1,6 @@
 #!/bin/bash
 pidof hyprlock && exit 0
+date +%s > /tmp/screensaver-started.ts
 omarchy-launch-screensaver
 
 # Turn off monitors 45 minutes after screensaver starts (total 60 min of idle)
